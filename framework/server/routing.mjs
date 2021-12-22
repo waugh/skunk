@@ -5,7 +5,7 @@ let not_found_mod;
 
 const suf_hndl = {
   "":   "framework/server/route_html.mjs",
-  txt:  "framework/server/route_txt.mjs", /* Including robots */
+  txt:  "framework/server/route_txt.mjs",
   json: "framework/server/route_json.mjs",
   css:  "framework/server/route_css.mjs",
   js:   "framework/server/route_js.mjs",
@@ -17,6 +17,8 @@ const suf_hndl = {
 }
 
 const handle = (req, res) => {
+  console.log("frameworks/server/routing.mjs");
+  console.log("typeof res.setHeader", typeof res.setHeader);
   const {url} = req;  /* It's a string. */
   console.log(url);
   const on_slash = url.split("/");
@@ -26,11 +28,8 @@ const handle = (req, res) => {
   console.log("suffix", JSON.stringify(suf));
   const mgr = module_manager;
   const modpath = suf_hndl[suf];
-  const hndl_server_defect = reason => {
-    console.log(reason);
-    console.log(
-      "in hndl_server_defect, framework symbol:", framework_symbol
-    );
+  const fail = reason => {
+    console.error(reason);
     req[framework_symbol] ||= {};
     req[framework_symbol].whyNotFound =
 `The server has failed, due to erroneous computer programming.
@@ -41,6 +40,7 @@ Guru meditation phrase: ${reason}.
 `;
     not_found_mod.handle(req, res)
   };
+  res[framework_symbol] = {fail};
   if (! modpath) {
     req[framework_symbol] ||= {};
     const qfix = JSON.stringify(`.${suf}`);
@@ -48,19 +48,19 @@ Guru meditation phrase: ${reason}.
     setTimeout(not_found_mod.handle, 0, req, res);
     return
   };
-  module_manager.find(modpath).catch(hndl_server_defect).then( mod => {
+  module_manager.find(modpath).catch(fail).then( mod => {
     try {
       mod.handle(req, res)
     } catch (err) {
-      hndl_server_defect(err)
+      fail(err)
     }
-  }).catch(hndl_server_defect);
+  }).catch(fail);
 }
 
 export const asInstalled = async function ({mgr}) {
   module_manager = mgr;
   not_found_mod = await 
-    mgr.find("framework/server/404.mjs").catch(console.log);
+    mgr.find("framework/server/404.mjs").catch(console.error);
   framework_symbol = framework_global.symbol;
   return {handle}
 }
